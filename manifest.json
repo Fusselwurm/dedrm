@@ -1,0 +1,23 @@
+{
+	"name": "Grab Content",
+	"version": "0.1",
+	"minimum_chrome_version": "10.0",
+	"description": "xxx",
+	"content_scripts": [{
+		"matches": [
+			"*://*/*"
+		],
+		"js": ["content.js"],
+		"all_frames": true
+    }],
+    "devtools_page": "devtools.html",
+	"background": { "scripts": ["background.js"] },
+	"permissions": [
+		"tabs",
+		"webRequest",
+		"devtools",
+		"http://*/*",
+		"https://*/*"
+	],
+	"manifest_version": 2
+}
