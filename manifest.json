@@ -1,6 +1,6 @@
 {
 	"name": "Grab Content",
-	"version": "0.1",
+	"version": "0.2",
 	"minimum_chrome_version": "10.0",
 	"description": "xxx",
 	"content_scripts": [{
@@ -19,5 +19,13 @@
 		"http://*/*",
 		"https://*/*"
 	],
+	"browser_action": {
+		"default_icon": {
+			"19": "icons/19.png",
+			"38": "icons/38.png"
+		},
+		"default_title": "DeDRM",
+		"default_popup": "popup.html"
+	},
 	"manifest_version": 2
 }
