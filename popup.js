@@ -1,15 +1,23 @@
 
 
 var
+	newDlLink = (function () {
+		var cnt = 0;
+		return function (pages) {
+			var b = new Blob(pages, {type: 'text/html'}),
+				ul = document.querySelector('#fileLinks'),
+				a = document.createElement('a');
+
+			cnt += 1;
+			a.download = 'book.html';
+			a.textContent = 'get file #' + cnt;
+			a.href = URL.createObjectURL(b);
+		};
+	}()),
 	pageCount = 0,
 	port = chrome.extension.connect({name: "popup"}),
-	buttonOn = function buttonOn() {
-		var button = document.querySelector('#dl');
-		button.removeAttribute('disabled');
-	},
-	buttonOff = function buttonOff() {
-		var button = document.querySelector('#dl');
-		button.setAttribute('disabled', 'disabled');
+	setStatus = function setStatus(s) {
+		document.querySelector('#status').textContent = s;
 	},
 	setPageCount = function (cnt) {
 		pageCount = cnt;
@@ -21,20 +29,13 @@ var
 		},
 		restart: function (msg) {
 			setPageCount(0);
-			buttonOff();
+			setStatus('restarting');
 		},
 		status: function (msg) {
-			switch (msg) {
-				case 'finished':
-					buttonOn();
-					break;
-				case 'running':
-				default:
-					buttonOff();
-			}
+			setStatus(msg);
 		},
 		deliver: function (pages) {
-			document.body.innerHTML = pages.join('<hr>');
+			newDlLink(pages);
 		}
 	},
 	listener = function (msg) {
