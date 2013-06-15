@@ -1,21 +1,5 @@
 var urls = ['*://*.google.com/*'];
 
-/*
-chrome.webRequest.onResponseStarted.addListener(function () {
-	console.log(arguments);
-}, {
-	urls: urls,
-	types: ['sub_frame', 'main_frame', "xmlhttprequest", "other"],
-});
-
-chrome.webRequest.onCompleted.addListener(function () {
-	console.log(arguments);
-}, {
-	urls: urls,
-	types: ['sub_frame', 'main_frame', "xmlhttprequest", "other"],
-});
-*/
-
 var
 	pages = [],
 	status = '',
@@ -28,7 +12,7 @@ var
 				contentPorts.forEach(function (port) {
 					port.postMessage(request);
 				});
-				status = 'running';
+				status = 'restarting';
 				break;
 			case 'get':
 				popupPort && popupPort.postMessage({
@@ -49,10 +33,17 @@ var
 			case 'append':
 				pages.push(request.message);
 				console.log(request.message.substr(0, 50));
+				popupPort && popupPort.postMessage({
+					action: 'pageCount',
+					message: pages.length
+				});
 				break;
 			case 'status':
 				status = request.message;
 				console.info(request.message);
+				popupPort && popupPort.postMessage(request);
+				break;
+			case 'currentPage':
 				popupPort && popupPort.postMessage(request);
 				break;
 			default:
@@ -73,6 +64,10 @@ chrome.extension.onConnect.addListener(function(port) {
 			port.postMessage({
 				action: 'status',
 				message: status
+			});
+			port.postMessage({
+				action: 'pageCount',
+				message: pages.length
 			});
 			break;
 		case 'content':

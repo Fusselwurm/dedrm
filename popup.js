@@ -1,17 +1,43 @@
 
 
 var
+	htmlMassage = (function () {
+		var steps = [
+			function removeClasses(s) {
+				return s.replace(/class="[^"]+"/g, '');
+			},
+			function removeStyles(s) {
+				return s.replace(/style="[^"]+"/g, '');
+			},
+			function wrap(s) {
+				return '<html><head><meta http-equiv="Content-Type" content="text/html;charset=utf-8" /></head><body>' + s + '</body></html>';
+			}
+		]
+		return function (html) {
+			return steps.reduce(function (html, step) {
+				return step(html);
+			}, html);
+		};
+	}()),
 	newDlLink = (function () {
 		var cnt = 0;
 		return function (pages) {
-			var b = new Blob(pages, {type: 'text/html'}),
+			var
 				ul = document.querySelector('#fileLinks'),
-				a = document.createElement('a');
+				li = document.createElement('li'),
+				a = document.createElement('a'),
+				html,
+				blob;
+
+			html = htmlMassage(pages.join(''));
+			blob = new Blob([html], {type: 'text/html'}),
 
 			cnt += 1;
 			a.download = 'book.html';
 			a.textContent = 'get file #' + cnt;
-			a.href = URL.createObjectURL(b);
+			a.href = URL.createObjectURL(blob);
+			li.appendChild(a);
+			ul.appendChild(li);
 		};
 	}()),
 	pageCount = 0,
@@ -23,6 +49,9 @@ var
 		pageCount = cnt;
 		document.querySelector('#pageCount').textContent = pageCount;
 	},
+	setCurrentPage = function (i) {
+		document.querySelector('#currentPage').textContent = i;
+	},
 	actions = {
 		append: function (msg) {
 			setPageCount(pageCount + 1);
@@ -33,15 +62,26 @@ var
 		},
 		status: function (msg) {
 			setStatus(msg);
+			if (msg === 'finished') {
+				port.postMessage({
+					action: 'get'
+				});
+			}
+		},
+		pageCount: function (msg) {
+			setPageCount(msg);
 		},
 		deliver: function (pages) {
 			newDlLink(pages);
+		},
+		currentPage: function (msg) {
+			setCurrentPage(msg);
 		}
 	},
-	listener = function (msg) {
-		var action = msg.action;
+	listener = function (request) {
+		var action = request.action;
 		if (action && actions[action]) {
-			actions[action](msg.message);
+			actions[action](request.message);
 		} else {
 			console.log('unknown action ' + action);
 		}
@@ -54,10 +94,4 @@ document.querySelector('#start').addEventListener('click', function () {
 		action: 'restart'
 	});
 	actions.restart();
-});
-
-document.querySelector('#dl').addEventListener('click', function () {
-	port.postMessage({
-		action: 'get'
-	});
 });

@@ -5,9 +5,12 @@ var
 	port = chrome.extension.connect({name: "content"}),
 	capturePage = function capturePage() {
 		var
-			frame = document.querySelector('iframe[src^=javascript]'),
-			doc = frame && frame.contentDocument,
-			html = doc && doc.body.innerHTML;
+			//frame = document.querySelector('iframe[src^=javascript]'),
+			//doc = frame && frame.contentDocument,
+			//html = doc && doc.body.innerHTML;
+			frame = true,
+			doc = document.querySelector('.gb-reader-container-reader'),
+			html = doc && doc.innerHTML;
 
 		if (html) {
 			port.postMessage({
@@ -21,46 +24,81 @@ var
 			});
 		}
 	},
-	scrollToStart = function () {
-		var evt,
-			i = 10;
-		for (; i > 0; i -= 1) {
-			evt = document.createEvent("WheelEvent");
-			Array.prototype.forEach.call(document.querySelectorAll('.gb-text-reader, gb-reader-container-reader'), function (el) {
-				evt.initWebKitWheelEvent(0, -999, window, 100, 100, 100, 100, false, false, false, false);
-				el.dispatchEvent(evt);
-			});
-		}
-	},
 	triggerMouseEvent = function (element, type) {
 		console.log('triggering ' + type + ' on ' + element);
 		var evt = document.createEvent("MouseEvents");
 		evt.initMouseEvent(type, true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
 		element.dispatchEvent(evt);
 	},
+	nav = {
+		numPages: function () {
+			return parseInt(document.querySelector('.gb-pagecontrol').textContent.match(/[0-9]+/)[0], 10);
+		},
+		currentPage: function () {
+			return parseInt(document.querySelector('.gb-pagecontrol-input').value, 10);
+		},
+		goToPage: function (fn) {
+			// note: exact page navigation not possible with this method, as there are fewer slider segments (children) than pages
+			// also... for some reason, it doesnt work :~p whatever, ill just navigate by hand...
+			try {
+				triggerMouseEvent(document.querySelector('.gb-slider-content div:nth-child(1)'), 'click');
+			} catch (e) {
+				console.error(e);
+			}
+
+			// direct input: im too lazy to find out which events need to be triggered here.
+			//var input = document.querySelector('input.gb-pagecontrol-input');
+			//input.value = i;
+			//input.parent.submit();
+
+			// this approach works, but takes some time to execute
+			// evt = document.createEvent("WheelEvent");
+			// Array.prototype.forEach.call(document.querySelectorAll('.gb-text-reader, gb-reader-container-reader'), function (el) {
+			// evt.initWebKitWheelEvent(0, -999, window, 100, 100, 100, 100, false, false, false, false);
+			// el.dispatchEvent(evt);
+			// });
+
+			if (fn) {
+				setTimeout(fn, 1000);
+			}
+		},
+		isLastPage: function () {
+			return this.currentPage() === this.numPages();
+
+		}
+	},
 	actions = {
 		restart: function restart() {
 			clearInterval(captureInterval);
 			// NOTE: .gb-backbutton doesnt always exist, points at different pages... :/
 			// scrolling seems to work, tho :)
-			scrollToStart();
+			nav.goToPage(function () {
+				port.postMessage({
+					action: 'status',
+					message: 'running'
+				});
 
-			captureInterval = setInterval(function () {
-				var arrowRight;
+				captureInterval = setInterval(function () {
+					var arrowRight;
 
-				capturePage();
-
-				arrowRight = document.querySelector('.gb-pagination-controls-right-arrow');
-				if (arrowRight && (arrowRight.getAttribute('style').indexOf('display: none') === -1)) {
-					triggerMouseEvent(arrowRight, 'mousedown');
-				} else {
 					port.postMessage({
-						action: 'status',
-						message: 'finished'
-					});
-					clearInterval(captureInterval);
-				}
-			}, interval);
+						action: 'currentPage',
+						message: nav.currentPage()
+					})
+					capturePage();
+
+					arrowRight = document.querySelector('.gb-pagination-controls-right-arrow');
+					if (nav.isLastPage()) {
+						clearInterval(captureInterval);
+						port.postMessage({
+							action: 'status',
+							message: 'finished'
+						});
+					} else {
+						triggerMouseEvent(arrowRight, 'mousedown');
+					}
+				}, interval);
+			});
 		}
 	},
 	listener = function (msg) {
