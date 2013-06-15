@@ -5,12 +5,16 @@ var
 	port = chrome.extension.connect({name: "content"}),
 	capturePage = function capturePage() {
 		var
-			//frame = document.querySelector('iframe[src^=javascript]'),
-			//doc = frame && frame.contentDocument,
-			//html = doc && doc.body.innerHTML;
-			frame = true,
-			doc = document.querySelector('.gb-reader-container-reader'),
-			html = doc && doc.innerHTML;
+			frames = document.querySelectorAll('iframe[src^=javascript]'),
+			frame = frames[frames.length - 1],
+			doc = frame && frame.contentDocument,
+			html = doc && doc.body.innerHTML;
+
+			// the DOM in the main window is obfuscated in that additional elements are inserted and
+			// hidden via CSS
+			//frame = true,
+			//doc = document.querySelector('.gb-reader-container-reader'),
+			//html = doc && doc.innerHTML;
 
 		if (html) {
 			port.postMessage({
