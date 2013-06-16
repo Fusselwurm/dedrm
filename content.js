@@ -3,6 +3,22 @@ var
 	interval = 1000,
 	captureInterval = 0,
 	port = chrome.extension.connect({name: "content"}),
+	prevHtml = '',
+	htmlMassage = (function () {
+		var steps = [
+			function removeClasses(s) {
+				return s.replace(/class="[^"]+"/g, '');
+			},
+			function removeStyles(s) {
+				return s.replace(/style="[^"]+"/g, '');
+			}
+		]
+		return function (html) {
+			return steps.reduce(function (html, step) {
+				return step(html);
+			}, html);
+		};
+	}()),
 	capturePage = function capturePage() {
 		var
 			frames = document.querySelectorAll('iframe[src^=javascript]'),
@@ -10,23 +26,10 @@ var
 			doc = frame && frame.contentDocument,
 			html = doc && doc.body.innerHTML;
 
-			// the DOM in the main window is obfuscated in that additional elements are inserted and
-			// hidden via CSS
-			//frame = true,
-			//doc = document.querySelector('.gb-reader-container-reader'),
-			//html = doc && doc.innerHTML;
+		console.log(frame ? (html ? 'yay!' : 'couldnt get document or doc empty') : 'didnt find frame');
 
-		if (html) {
-			port.postMessage({
-				action: 'append',
-				message: html
-			});
-		} else {
-			port.postMessage({
-				action: 'error',
-				message: frame ? (html ? 'yay!' : 'couldnt get document or doc empty') : 'didnt find frame'
-			});
-		}
+
+		return doc.body.textContent.trim().length > 5 ? html.trim() : '';
 	},
 	triggerMouseEvent = function (element, type) {
 		console.log('triggering ' + type + ' on ' + element);
@@ -42,6 +45,9 @@ var
 			return parseInt(document.querySelector('.gb-pagecontrol-input').value, 10);
 		},
 		goToPage: function (fn) {
+			// FIXME
+
+
 			// note: exact page navigation not possible with this method, as there are fewer slider segments (children) than pages
 			// also... for some reason, it doesnt work :~p whatever, ill just navigate by hand...
 			try {
@@ -71,11 +77,21 @@ var
 
 		}
 	},
+	htmlIsOk = function (html) {
+		var res = false;
+
+		console.debug('html starts with: "' + html.substr(0, 50) + '"');
+
+		if (html && html !==prevHtml) {
+			res = true;
+		}
+
+		prevHtml = html;
+		return res;
+	},
 	actions = {
 		restart: function restart() {
 			clearInterval(captureInterval);
-			// NOTE: .gb-backbutton doesnt always exist, points at different pages... :/
-			// scrolling seems to work, tho :)
 			nav.goToPage(function () {
 				port.postMessage({
 					action: 'status',
@@ -83,13 +99,25 @@ var
 				});
 
 				captureInterval = setInterval(function () {
-					var arrowRight;
+					var arrowRight, html;
 
 					port.postMessage({
 						action: 'currentPage',
 						message: nav.currentPage()
 					})
-					capturePage();
+					html = htmlMassage(capturePage());
+					if (htmlIsOk(html)) {
+						port.postMessage({
+							action: 'append',
+							message: html
+						});
+					} else {
+						port.postMessage({
+							action: 'status',
+							message: 'error'
+						});
+						clearInterval(captureInterval);
+					}
 
 					arrowRight = document.querySelector('.gb-pagination-controls-right-arrow');
 					if (nav.isLastPage()) {

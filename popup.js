@@ -1,24 +1,7 @@
 
 
 var
-	htmlMassage = (function () {
-		var steps = [
-			function removeClasses(s) {
-				return s.replace(/class="[^"]+"/g, '');
-			},
-			function removeStyles(s) {
-				return s.replace(/style="[^"]+"/g, '');
-			},
-			function wrap(s) {
-				return '<html><head><meta http-equiv="Content-Type" content="text/html;charset=utf-8" /></head><body>' + s + '</body></html>';
-			}
-		]
-		return function (html) {
-			return steps.reduce(function (html, step) {
-				return step(html);
-			}, html);
-		};
-	}()),
+
 	newDlLink = (function () {
 		var cnt = 0;
 		return function (pages) {
@@ -29,7 +12,8 @@ var
 				html,
 				blob;
 
-			html = htmlMassage(pages.join(''));
+			html = pages.join('<hr />');
+			html = '<html><head><meta http-equiv="Content-Type" content="text/html;charset=utf-8" /></head><body>' + s + '</body></html>';
 			blob = new Blob([html], {type: 'text/html'}),
 
 			cnt += 1;
